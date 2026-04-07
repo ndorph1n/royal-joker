@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="./style.css" />
+    <title>Royal Joker</title>
+  </head>
+
+  <body class="page">
+    <img class="logo" src="./assets/rj/logo.png" alt="Royal Joker Logo" />
+    <div class="greeting">
+      <h2 class="greeting__title"></h2>
+      <button class="greeting__button"></button>
+    </div>
+    <div id="app">
+      <div id="pixi-container"></div>
+    </div>
+
+    <div class="modal-backdrop" id="cashout-modal" hidden>
+      <div class="modal">
+        <p class="modal__title"></p>
+        <button class="modal__button" type="button"></button>
+      </div>
+    </div>
+
+    <footer class="controls">
+      <div class="balance">
+        <p class="balance__label">
+          <span class="balance__amount"></span> +
+          <span class="balance__fs"></span>
+        </p>
+      </div>
+      <p class="win"><span class="win__amount"></span></p>
+      <div class="bet">
+        <p class="bet__label"><span class="bet__amount"></span></p>
+        <button class="bet__control bet__control_reduce">-</button>
+        <button class="bet__control bet__control_increase">+</button>
+      </div>
+      <button class="spin">
+        <img class="spin__image" src="./assets/spin.png" alt="spin button" />
+      </button>
+    </footer>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
