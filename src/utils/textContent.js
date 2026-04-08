@@ -40,10 +40,6 @@ export function formatCurrency(value, options = {}) {
   return `${symbol}${gap}${rounded}`;
 }
 
-export function formatFreeSpins(value) {
-  return `${Math.round(value)}FS`;
-}
-
 export function formatMultiplier(value) {
   return `${TEXT.game.finalMultiplierPrefix}${Math.round(value)}`;
 }

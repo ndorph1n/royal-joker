@@ -2,6 +2,7 @@ import {
   Application,
   Assets,
   Container,
+  FillGradient,
   Graphics,
   Sprite,
   Text,
@@ -10,7 +11,9 @@ import {
 
 import bgImg from "../assets/bg.png";
 import gameFieldBgImg from "../assets/rj/field.png";
-import chickenDecorImg from "../assets/chicken-dec.png";
+import coinsDecorBackImg from "../assets/rj/coin-decor.png";
+import coinsDecorFrontImg from "../assets/rj/coin-decor-f.png";
+import coinDecorImg from "../assets/rj/coin-decor-c.png";
 import lightningAtlas from "../assets/lightning.json";
 import lightningImg from "../assets/lightning.png";
 import glowAtlas from "../assets/glow/glow.json";
@@ -18,6 +21,7 @@ import glowImg from "../assets/glow/glow.png";
 import finalSpecialImg from "../assets/icons/10-1.png";
 import bigWinImg from "../assets/big-win.png";
 import pointImg from "../assets/point.png";
+import royalJokerSign from "../assets/rj/royal-joker.png";
 
 import { GAMEFIELD } from "./utils/parameters";
 import { getCoverScale } from "./utils/screenCover";
@@ -29,14 +33,9 @@ import {
   getVisibleSymbols,
 } from "./utils/lightningEffect";
 import { createSpecialSymbolOverlay } from "./utils/specialSymbolOverlay";
-import { wobble } from "./utils/wobble";
+import { findWinCells, wobble } from "./utils/wobble";
 import { SOUNDS } from "./utils/sounds";
-import {
-  TEXT,
-  formatCurrency,
-  formatFreeSpins,
-  formatMultiplier,
-} from "./utils/textContent";
+import { TEXT, formatCurrency, formatMultiplier } from "./utils/textContent";
 
 (async () => {
   const pixiContainer = document.getElementById("pixi-container");
@@ -46,19 +45,25 @@ import {
   const greetingButton = document.querySelector(".greeting__button");
   const greetingButtonText = document.querySelector(".greeting__button-text");
   const spinButton = document.querySelector(".spin");
+  const balanceIntro = document.querySelector(".balance-intro");
+  const betUpgrade = document.querySelector(".bet-upgrade");
+  const betUpgradeMessage = document.querySelector(".bet-upgrade__message");
+  const betUpgradePointer = document.querySelector(".bet-upgrade__pointer");
   const modalTitle = document.querySelector(".modal__title");
   const modalButton = document.querySelector(".modal__button");
   const controls = document.querySelector(".controls");
   const balanceLabel = document.querySelector(".balance__label");
   const balanceAmount = document.querySelector(".balance__amount");
-  const freeSpinsAmount = document.querySelector(".balance__fs");
   const winLabel = document.querySelector(".win");
   const winAmount = document.querySelector(".win__amount");
+  const bet = document.querySelector(".bet");
   const betLabel = document.querySelector(".bet__label");
   const betAmount = document.querySelector(".bet__amount");
   const app = new Application();
 
   let spinCount = 0;
+  let currentBet = TEXT.controls.initialBet;
+  let betUpgradePending = false;
   let gameStarted = false;
   let soundEnabled = false;
   const symbolTextEntries = new Set();
@@ -69,11 +74,6 @@ import {
     balance: createAnimatedValue(0, (value) => {
       if (balanceAmount) {
         balanceAmount.textContent = formatCurrency(value);
-      }
-    }),
-    freeSpins: createAnimatedValue(0, (value) => {
-      if (freeSpinsAmount) {
-        freeSpinsAmount.textContent = formatFreeSpins(value);
       }
     }),
     win: createAnimatedValue(0, (value) => {
@@ -105,14 +105,50 @@ import {
   const finalSpecialTexture = await Assets.load(finalSpecialImg);
   const bigWinTexture = await Assets.load(bigWinImg);
   const pointTexture = await Assets.load(pointImg);
-  const chickenDecorTexture = await Assets.load(chickenDecorImg);
+  const coinsBackDecorTexture = await Assets.load(coinsDecorBackImg);
+  const coinsFrontDecorTexture = await Assets.load(coinsDecorFrontImg);
+  const coinDecorTexture = await Assets.load(coinDecorImg);
+  const royalJokerSignTexture = await Assets.load(royalJokerSign);
 
-  const chickenDecor = new Sprite({
-    label: "chicken decor image",
-    texture: chickenDecorTexture,
-    anchor: { x: 0.5, y: 1 },
+  const coinsDecoreContainer = new Container({
+    label: "coins decor container",
+    zIndex: 20,
   });
-  chickenDecor.zIndex = 2.1;
+
+  const coinsBackDecor = new Sprite({
+    label: "coins decor image",
+    texture: coinsBackDecorTexture,
+    anchor: { x: 0.5, y: 1 },
+    zIndex: 2,
+  });
+
+  const coinsFrontDecor = new Sprite({
+    label: "coins front decor image",
+    texture: coinsFrontDecorTexture,
+    anchor: { x: 0.5, y: 1 },
+    zIndex: 4,
+  });
+
+  const coinDecor = new Sprite({
+    label: "coin decor image",
+    texture: coinDecorTexture,
+    anchor: { x: 0.5, y: 0.5 },
+    zIndex: 3,
+  });
+
+  const royalJoker = new Sprite({
+    label: "royal joker sign",
+    texture: royalJokerSignTexture,
+    anchor: { x: 0.5, y: 0.5 },
+    zIndex: 5,
+  });
+
+  coinsDecoreContainer.addChild(
+    coinsBackDecor,
+    coinsFrontDecor,
+    coinDecor,
+    royalJoker,
+  );
 
   const bg = new Sprite({
     label: "background image",
@@ -130,6 +166,11 @@ import {
     width: GAMEFIELD.width,
     height: GAMEFIELD.height,
     zIndex: 2,
+  });
+
+  const fieldVignetteLayer = new Container({
+    label: "field vignette layer",
+    zIndex: 3.2,
   });
 
   const cashOutButton = new Container({
@@ -164,11 +205,59 @@ import {
   cashOutText.position.set(cashOutBg.width / 2, 28);
   cashOutButton.alpha = 0.75;
   cashOutButton.addChild(cashOutBg, cashOutText);
+  buildFieldVignettes(fieldVignetteLayer, gameFieldBg);
 
-  chickenDecor.width = gameFieldBg.width * 0.65;
-  chickenDecor.height = gameFieldBg.height * 0.4;
-  chickenDecor.position.set(0, -gameFieldBg.height / 2 + 20);
-  cashOutButton.position.set(-75, gameFieldBg.height / 2 + 18);
+  coinsBackDecor.width = gameFieldBg.width * 0.75;
+  coinsBackDecor.height = gameFieldBg.height * 0.2;
+  coinsBackDecor.position.set(0, -gameFieldBg.height / 2);
+  coinsFrontDecor.width = gameFieldBg.width * 0.75;
+  coinsFrontDecor.height = gameFieldBg.height * 0.13;
+  coinsFrontDecor.position.set(0, -gameFieldBg.height / 2 + 2);
+  coinDecor.width = 110;
+  coinDecor.height = 110;
+  coinDecor.position.set(0, -gameFieldBg.height / 2 - 80);
+  cashOutButton.position.set(-75, gameFieldBg.height / 2);
+
+  royalJoker.width = gameFieldBg.width * 0.65;
+  royalJoker.height = gameFieldBg.height * 0.125;
+  royalJoker.position.set(0, -gameFieldBg.height / 2 - 10);
+
+  const coinDecorBaseY = coinDecor.y;
+  const coinDecorBaseScaleX = coinDecor.scale.x;
+  const coinDecorBaseScaleY = coinDecor.scale.y;
+  const coinDecorBounceHeight = 50;
+  const coinDecorBounceDuration = 1200;
+  const coinDecorPauseDuration = 4000;
+  const coinDecorCycleDuration =
+    coinDecorBounceDuration + coinDecorPauseDuration;
+  const coinDecorSpinWindow = 0.45;
+  let coinDecorElapsed = 0;
+
+  app.ticker.add(({ deltaMS }) => {
+    coinDecorElapsed = (coinDecorElapsed + deltaMS) % coinDecorCycleDuration;
+
+    if (coinDecorElapsed > coinDecorBounceDuration) {
+      coinDecor.y = coinDecorBaseY;
+      coinDecor.scale.set(coinDecorBaseScaleX, coinDecorBaseScaleY);
+      return;
+    }
+
+    const progress = coinDecorElapsed / coinDecorBounceDuration;
+    const bounceProgress = Math.sin(progress * Math.PI);
+    const apexDistance = Math.abs(progress - 0.5);
+    const spinProgress = Math.max(0, 1 - apexDistance / coinDecorSpinWindow);
+
+    coinDecor.y = coinDecorBaseY - bounceProgress * coinDecorBounceHeight;
+    coinDecor.scale.y = coinDecorBaseScaleY;
+
+    if (spinProgress > 0) {
+      coinDecor.scale.x =
+        coinDecorBaseScaleX *
+        Math.max(0.08, Math.abs(Math.cos(spinProgress * Math.PI * 2)));
+    } else {
+      coinDecor.scale.x = coinDecorBaseScaleX;
+    }
+  });
 
   const gameWindow = new Container({
     label: "game window",
@@ -182,7 +271,8 @@ import {
   scene.addChild(gameWindow);
   gameWindow.addChild(
     gameFieldBg,
-    chickenDecor,
+    fieldVignetteLayer,
+    coinsDecoreContainer,
     cashOutButton,
     symbolTextLayer,
   );
@@ -201,7 +291,7 @@ import {
 
     const controlsHeight = controls?.getBoundingClientRect().height ?? 0;
     const horizontalPadding = width < 680 ? 16 : 32;
-    const topPadding = width < 680 ? 20 : 28;
+    const topPadding = width < 680 ? 120 : 158;
     const bottomPadding = controlsHeight + (width < 680 ? 16 : 28);
     const layoutBounds = getSceneLayoutBounds(gameWindow);
     const availableWidth = Math.max(1, width - horizontalPadding * 2);
@@ -284,10 +374,15 @@ import {
   });
 
   spinButton?.addEventListener("click", async () => {
+    spinButton.classList.remove("spin--glow");
+
     if (!gameStarted) return;
+    if (betUpgradePending) return;
     if (spinner.isSpinning()) return;
     if (spinCount >= 4) return;
-    if (counters.freeSpins.target <= 0) return;
+    if (counters.balance.target < currentBet) return;
+
+    const currentSpinIndex = spinCount;
 
     SOUNDS.click.currentTime = 0;
     SOUNDS.click.play();
@@ -297,8 +392,10 @@ import {
     SOUNDS.spinning.currentTime = 0;
     SOUNDS.spinning.play();
 
-    counters.win.animateTo(0, { duration: 220 });
-    counters.freeSpins.animateTo(counters.freeSpins.target - 1, {
+    counters.balance.animateTo(counters.balance.target - currentBet, {
+      duration: 320,
+    });
+    counters.win.animateTo(0, {
       duration: 320,
     });
 
@@ -309,12 +406,12 @@ import {
     specialSymbolOverlay.setVisibleReels([]);
     const settledReels = [];
 
-    switch (spinCount) {
+    switch (currentSpinIndex) {
       case 0:
         resultIdx = [
-          [7, 0, 3],
-          [7, 2, 1],
-          [7, 0, 3],
+          [1, 3, 3],
+          [7, 3, 1],
+          [3, 0, 6],
         ];
         break;
 
@@ -328,8 +425,8 @@ import {
 
       case 2:
         resultIdx = [
-          [1, 1, 3],
-          [4, 2, 5],
+          [1, 1, 0],
+          [4, 2, 0],
           [3, 8, 0],
         ];
         break;
@@ -365,32 +462,34 @@ import {
 
     let stopWobble = null;
 
-    if (spinCount === 0) {
+    if (currentSpinIndex === 0) {
       SOUNDS.win.currentTime = 0;
       SOUNDS.win.play();
 
-      const plumSymbols = getVisibleSymbols({
-        reels,
-        textures,
-        GAMEFIELD,
-        visibleHeight,
-      })
-        .filter((item) => item.index === 7)
-        .sort((a, b) => a.point.x - b.point.x);
+      const winningCenterSymbol = getWinningCenterSymbol(
+        getVisibleSymbolsByWinCells({
+          symbols: getVisibleSymbols({
+            reels,
+            textures,
+            GAMEFIELD,
+            visibleHeight,
+          }),
+          winCells: findWinCells(resultIdx, GAMEFIELD.cols, GAMEFIELD.rows),
+        }),
+      );
 
-      const middlePlum = plumSymbols[Math.floor(plumSymbols.length / 2)];
-      if (middlePlum) {
+      if (winningCenterSymbol) {
         showSymbolText({
-          id: "first-spin-plum",
+          id: "first-spin-win",
           text: TEXT.game.firstSpinSymbolWin,
-          symbol: middlePlum,
+          symbol: winningCenterSymbol,
           style: getSymbolTextStyle({
             fontSize: 34,
             fill: 0xfff1b5,
             strokeColor: 0x6f2f00,
             strokeWidth: 6,
           }),
-          yOffset: -40,
+          yOffset: -15,
           duration: 1000,
         });
       }
@@ -406,13 +505,56 @@ import {
       });
     }
 
-    if (spinCount === 1 || spinCount === 2) {
+    if (currentSpinIndex === 1 || currentSpinIndex === 2) {
       counters.win.animateTo(0, {
         duration: 450,
       });
     }
 
-    if (spinCount === 3) {
+    if (currentSpinIndex === 2) {
+      SOUNDS.win.currentTime = 0;
+      SOUNDS.win.play();
+
+      const winningCenterSymbol = getWinningCenterSymbol(
+        getVisibleSymbolsByWinCells({
+          symbols: getVisibleSymbols({
+            reels,
+            textures,
+            GAMEFIELD,
+            visibleHeight,
+          }),
+          winCells: findWinCells(resultIdx, GAMEFIELD.cols, GAMEFIELD.rows),
+        }),
+      );
+
+      if (winningCenterSymbol) {
+        showSymbolText({
+          id: "upgrade-spin-win",
+          text: TEXT.game.upgradeSpinSymbolWin,
+          symbol: winningCenterSymbol,
+          style: getSymbolTextStyle({
+            fontSize: 34,
+            fill: 0xfff1b5,
+            strokeColor: 0x6f2f00,
+            strokeWidth: 6,
+          }),
+          yOffset: -15,
+          duration: 1000,
+        });
+      }
+
+      counters.balance.animateTo(
+        counters.balance.target + TEXT.game.upgradeSpinWin,
+        {
+          duration: 850,
+        },
+      );
+      counters.win.animateTo(TEXT.game.upgradeSpinWin, {
+        duration: 850,
+      });
+    }
+
+    if (currentSpinIndex === 3) {
       SOUNDS.win.currentTime = 0;
       SOUNDS.win.play();
 
@@ -469,11 +611,16 @@ import {
         stopWobble?.();
         stopWobble = null;
 
-        if (spinCount < 4 && counters.freeSpins.target > 0) {
+        if (currentSpinIndex === 2) {
+          showBetUpgradePrompt();
+          return;
+        }
+
+        if (spinCount < 4 && counters.balance.target >= currentBet) {
           spinButton.disabled = false;
         }
       },
-      spinCount === 0 || spinCount === 3 ? 1000 : 200,
+      currentSpinIndex === 0 || currentSpinIndex === 2 ? 1000 : 200,
     );
 
     spinCount++;
@@ -488,16 +635,35 @@ import {
     SOUNDS.click.play();
 
     counters.balance.animateTo(TEXT.game.startBalance, { duration: 1500 });
-    counters.freeSpins.animateTo(TEXT.game.startFs, { duration: 1500 });
+    counters.win.animateTo(0, { duration: 400 });
+    spinButton?.classList.add("spin--glow");
 
     greeting?.classList.add("hidden");
     setTimeout(() => {
       greeting?.remove();
+      showBalanceIntro();
     }, 200);
   });
 
   modalButton?.addEventListener("click", () => {
     FbPlayableAd.onCTAClick();
+  });
+
+  bet?.addEventListener("click", (event) => {
+    if (!betUpgradePending) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    SOUNDS.click.currentTime = 0;
+    SOUNDS.click.play();
+
+    setCurrentBet(TEXT.controls.upgradedBet);
+    hideBetUpgradePrompt();
+
+    if (spinCount < 5 && counters.balance.target >= currentBet) {
+      spinButton.disabled = false;
+    }
   });
 
   function showSymbolText({
@@ -613,9 +779,7 @@ import {
     if (betLabel) {
       setLeadingText(betLabel, `${TEXT.controls.betLabel} `);
     }
-    if (betAmount) {
-      betAmount.textContent = formatCurrency(TEXT.controls.initialBet);
-    }
+    setCurrentBet(currentBet);
   }
 
   function setLeadingText(element, nextText) {
@@ -629,6 +793,58 @@ import {
     }
 
     element.prepend(document.createTextNode(nextText));
+  }
+
+  function showBalanceIntro() {
+    if (!balanceIntro) return;
+
+    balanceIntro.textContent = `BALANCE +${formatCurrency(TEXT.game.startBalance)}`;
+    balanceIntro.classList.remove("balance-intro--show");
+    void balanceIntro.offsetWidth;
+    balanceIntro.classList.add("balance-intro--show");
+  }
+
+  function setCurrentBet(value) {
+    currentBet = value;
+
+    if (betAmount) {
+      betAmount.textContent = formatCurrency(currentBet);
+    }
+  }
+
+  function showBetUpgradePrompt() {
+    if (!betUpgrade || !bet || !betUpgradeMessage) return;
+
+    betUpgradePending = true;
+    betUpgradeMessage.textContent = TEXT.game.upgradeBetPrompt;
+    document.body.classList.add("bet-upgrade-active");
+    betUpgrade.removeAttribute("hidden");
+    positionBetUpgradePrompt();
+    window.addEventListener("resize", positionBetUpgradePrompt);
+  }
+
+  function hideBetUpgradePrompt() {
+    betUpgradePending = false;
+    document.body.classList.remove("bet-upgrade-active");
+    betUpgrade?.setAttribute("hidden", "");
+    window.removeEventListener("resize", positionBetUpgradePrompt);
+  }
+
+  function positionBetUpgradePrompt() {
+    if (!bet || !betUpgradeMessage || !betUpgradePointer) return;
+
+    const rect = bet.getBoundingClientRect();
+    const messageX = rect.left + rect.width / 2;
+    const messageY = rect.top - 78;
+    const pointerX = rect.left + rect.width - 26;
+    const pointerY = rect.top - 12;
+
+    betUpgradeMessage.style.left = `${messageX}px`;
+    betUpgradeMessage.style.top = `${messageY}px`;
+    betUpgradeMessage.style.transform = "translate(-50%, -100%)";
+
+    betUpgradePointer.style.left = `${pointerX}px`;
+    betUpgradePointer.style.top = `${pointerY}px`;
   }
 })();
 
@@ -705,5 +921,106 @@ function getSymbolTextStyle({ fontSize, fill, strokeColor, strokeWidth }) {
     fontSize,
     fontWeight: "700",
     stroke: { color: strokeColor, width: strokeWidth, join: "round" },
+  });
+}
+
+function buildFieldVignettes(container, gameFieldBg) {
+  const fieldWidth = gameFieldBg.width - 25;
+  const fieldHeight = gameFieldBg.height;
+  const bandHeight = fieldHeight * 0.25;
+
+  const topGradient = new FillGradient({
+    type: "linear",
+    start: { x: 0, y: 0 },
+    end: { x: 0, y: 1 },
+    textureSpace: "local",
+    colorStops: [
+      { offset: 0, color: "rgba(0, 0, 0, 0.35)" },
+      { offset: 1, color: "rgba(0, 0, 0, 0)" },
+    ],
+  });
+
+  const bottomGradient = new FillGradient({
+    type: "linear",
+    start: { x: 0, y: 1 },
+    end: { x: 0, y: 0 },
+    textureSpace: "local",
+    colorStops: [
+      { offset: 0, color: "rgba(0, 0, 0, 0.35)" },
+      { offset: 1, color: "rgba(0, 0, 0, 0)" },
+    ],
+  });
+
+  const topBand = new Graphics({ label: "top field vignette" });
+  topBand
+    .rect(-fieldWidth / 2, -fieldHeight / 2 + 5, fieldWidth, bandHeight)
+    .fill(topGradient);
+
+  const bottomBand = new Graphics({ label: "bottom field vignette" });
+  bottomBand
+    .rect(
+      -fieldWidth / 2,
+      fieldHeight / 2 - bandHeight - 5,
+      fieldWidth,
+      bandHeight,
+    )
+    .fill(bottomGradient);
+
+  container.addChild(topBand, bottomBand);
+}
+
+function getWinningCenterSymbol(symbols) {
+  if (!symbols.length) return null;
+  if (symbols.length === 1) return symbols[0];
+
+  const medianX = [...symbols].sort((a, b) => a.point.x - b.point.x)[
+    Math.floor(symbols.length / 2)
+  ].point.x;
+  const medianY = [...symbols].sort((a, b) => a.point.y - b.point.y)[
+    Math.floor(symbols.length / 2)
+  ].point.y;
+
+  const exactMatch = symbols.find(
+    (symbol) => symbol.point.x === medianX && symbol.point.y === medianY,
+  );
+
+  if (exactMatch) {
+    return exactMatch;
+  }
+
+  const centerX =
+    symbols.reduce((sum, symbol) => sum + symbol.point.x, 0) / symbols.length;
+  const centerY =
+    symbols.reduce((sum, symbol) => sum + symbol.point.y, 0) / symbols.length;
+
+  return [...symbols].sort((left, right) => {
+    const leftDistance = Math.hypot(
+      left.point.x - centerX,
+      left.point.y - centerY,
+    );
+    const rightDistance = Math.hypot(
+      right.point.x - centerX,
+      right.point.y - centerY,
+    );
+
+    return leftDistance - rightDistance;
+  })[0];
+}
+
+function getVisibleSymbolsByWinCells({ symbols, winCells }) {
+  if (!symbols.length || !winCells.size) return [];
+
+  const sortedX = [...new Set(symbols.map((symbol) => symbol.point.x))].sort(
+    (a, b) => a - b,
+  );
+  const sortedY = [...new Set(symbols.map((symbol) => symbol.point.y))].sort(
+    (a, b) => b - a,
+  );
+
+  return symbols.filter((symbol) => {
+    const col = sortedX.indexOf(symbol.point.x);
+    const row = sortedY.indexOf(symbol.point.y);
+
+    return winCells.has(`${col},${row}`);
   });
 }

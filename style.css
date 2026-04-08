@@ -65,6 +65,30 @@ img {
   height: 100%;
 }
 
+.balance-intro {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 120;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  opacity: 0;
+  color: #fff1b5;
+  font-size: clamp(1.4rem, 4.5vw, 2.3rem);
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-shadow:
+    0 2px 0 rgba(98, 41, 0, 0.95),
+    0 0 18px rgba(255, 206, 96, 0.65),
+    0 0 38px rgba(255, 147, 36, 0.45);
+  white-space: nowrap;
+}
+
+.balance-intro--show {
+  animation: balance-intro-float 1.65s ease-out forwards;
+}
+
 #app canvas {
   display: block;
   width: 100%;
@@ -206,6 +230,21 @@ img {
   }
 }
 
+@keyframes balance-intro-float {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, calc(-50% + 56px)) scale(0.9);
+  }
+  50% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, calc(-50% - 72px)) scale(1.04);
+  }
+}
+
 .controls {
   position: absolute;
   bottom: 0;
@@ -220,6 +259,62 @@ img {
   max-width: 800px;
   padding: 20px 25px;
   gap: 16px;
+
+  text-transform: uppercase;
+}
+
+.bet-upgrade[hidden] {
+  display: none;
+}
+
+.bet-upgrade {
+  position: fixed;
+  inset: 0;
+  z-index: 140;
+  pointer-events: none;
+}
+
+body.bet-upgrade-active #app {
+  filter: brightness(0.42);
+}
+
+body.bet-upgrade-active .controls > *:not(.bet) {
+  opacity: 0.25;
+}
+
+body.bet-upgrade-active .bet {
+  position: relative;
+  z-index: 160;
+  cursor: pointer;
+  box-shadow:
+    0 0 0 3px rgba(255, 214, 111, 0.95),
+    0 0 30px rgba(255, 184, 46, 0.55),
+    inset 2px 2px 1px #372c2b;
+}
+
+.bet-upgrade__message {
+  position: absolute;
+  min-width: 220px;
+  padding: 14px 18px;
+  border: 2px solid rgba(255, 216, 118, 0.9);
+  border-radius: 16px;
+  background: linear-gradient(180deg, #6b0202 0%, #3e0202 100%);
+  color: #fff2bf;
+  font-size: clamp(1rem, 2.6vw, 1.25rem);
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: center;
+  text-transform: uppercase;
+  box-shadow:
+    0 18px 40px rgba(0, 0, 0, 0.34),
+    0 0 24px rgba(255, 176, 47, 0.3);
+}
+
+.bet-upgrade__pointer {
+  position: absolute;
+  width: clamp(52px, 6vw, 72px);
+  transform: rotate(-18deg);
+  filter: drop-shadow(0 10px 14px rgba(0, 0, 0, 0.45));
 }
 
 .balance {
@@ -233,23 +328,18 @@ img {
 
   padding: 10px 10px 10px 10px;
 
-  text-align: left;
+  text-align: center;
   line-height: 1.2;
 
   border-radius: 10px;
 }
 
 .balance__label {
-  color: #f19e38;
+  color: #c0c0c0;
   white-space: nowrap;
 }
 
 .balance__amount {
-  color: #ffffff;
-  font-weight: 600;
-}
-
-.balance__fs {
   color: #ffffff;
   font-weight: 600;
 }
@@ -267,6 +357,13 @@ img {
   flex: 1 1 110px;
   min-width: 0;
   border-radius: 10px;
+
+  color: #c0c0c0;
+}
+
+.win__amount {
+  color: #ffffff;
+  font-weight: 600;
 }
 
 .bet {
@@ -282,7 +379,9 @@ img {
   text-align: center;
   line-height: 1.2;
 
-  border-radius: 10px;
+  border-radius: 25px;
+
+  color: #c0c0c0;
 }
 
 .bet__label {
@@ -309,7 +408,7 @@ img {
 
   color: #ffffff;
   border: none;
-  border-radius: 10px;
+  border-radius: 50%;
 
   padding: 14px 20px;
   font-size: 1.5rem;
@@ -327,14 +426,16 @@ img {
 }
 
 .spin {
+  position: relative;
+  isolation: isolate;
   border: none;
-  border-radius: 10px;
+  border-radius: 50%;
 
   background: radial-gradient(
     circle at 50% 40%,
-    rgba(61, 202, 99, 1) 0%,
-    rgba(41, 149, 75, 1) 35%,
-    rgba(34, 126, 82, 1) 100%
+    rgb(202, 169, 61) 0%,
+    rgb(240, 174, 31) 35%,
+    rgb(228, 146, 23) 100%
   );
   cursor: pointer;
   flex: 0 0 auto;
@@ -342,6 +443,27 @@ img {
     filter 0.18s ease,
     opacity 0.18s ease,
     transform 0.18s ease;
+}
+
+.spin::before {
+  content: "";
+  position: absolute;
+  inset: -12px;
+  z-index: -1;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(255, 221, 123, 0.85) 0%,
+    rgba(255, 184, 46, 0.45) 45%,
+    rgba(255, 150, 27, 0) 72%
+  );
+  opacity: 0;
+  transform: scale(0.9);
+  pointer-events: none;
+}
+
+.spin--glow::before {
+  animation: spin-glow-pulse 1.4s ease-out infinite;
 }
 
 .spin__image {
@@ -357,6 +479,21 @@ img {
   cursor: default;
   opacity: 0.72;
   filter: grayscale(0.35) brightness(0.82) saturate(0.8);
+}
+
+@keyframes spin-glow-pulse {
+  0% {
+    opacity: 0.2;
+    transform: scale(0.88);
+  }
+  55% {
+    opacity: 1;
+    transform: scale(1.18);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.34);
+  }
 }
 
 .modal-backdrop[hidden] {

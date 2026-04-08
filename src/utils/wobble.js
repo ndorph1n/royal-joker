@@ -128,7 +128,7 @@ function getVisibleSprites(reel, GAMEFIELD, visibleHeight, rows = 3) {
     .map(({ s }) => s);
 }
 
-function findWinCells(shown, cols, rows) {
+export function findWinCells(shown, cols, rows) {
   const wins = new Set();
   if (cols < 3 || rows < 3) return wins;
 

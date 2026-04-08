@@ -24,6 +24,15 @@
     </div>
     <div id="app">
       <div id="pixi-container"></div>
+      <div class="balance-intro" aria-hidden="true"></div>
+    </div>
+    <div class="bet-upgrade" hidden aria-hidden="true">
+      <div class="bet-upgrade__message"></div>
+      <img
+        src="./assets/rj/pointer.png"
+        alt="pointer"
+        class="bet-upgrade__pointer"
+      />
     </div>
 
     <div class="modal-backdrop" id="cashout-modal" hidden>
@@ -35,10 +44,7 @@
 
     <footer class="controls">
       <div class="balance">
-        <p class="balance__label">
-          <span class="balance__amount"></span> +
-          <span class="balance__fs"></span>
-        </p>
+        <p class="balance__label"><span class="balance__amount"></span></p>
       </div>
       <p class="win"><span class="win__amount"></span></p>
       <div class="bet">
