@@ -44,6 +44,7 @@ import {
   const greeting = document.querySelector(".greeting");
   const greetingTitle = document.querySelector(".greeting__title");
   const greetingButton = document.querySelector(".greeting__button");
+  const greetingButtonText = document.querySelector(".greeting__button-text");
   const spinButton = document.querySelector(".spin");
   const modalTitle = document.querySelector(".modal__title");
   const modalButton = document.querySelector(".modal__button");
@@ -83,7 +84,6 @@ import {
   };
 
   let resultIdx = [
-    [0, 0, 0],
     [0, 0, 0],
     [0, 0, 0],
     [0, 0, 0],
@@ -229,7 +229,7 @@ import {
   fieldContainer.zIndex = 3;
   fieldContainer.position.set(
     -GAMEFIELD.width / 2 + GAMEFIELD.startX,
-    -GAMEFIELD.height / 2 + GAMEFIELD.startY,
+    -GAMEFIELD.height / 2,
   );
 
   gameWindow.addChild(fieldContainer);
@@ -312,33 +312,33 @@ import {
     switch (spinCount) {
       case 0:
         resultIdx = [
-          [7, 0, 3, 2],
-          [7, 2, 1, 1],
-          [7, 0, 3, 2],
+          [7, 0, 3],
+          [7, 2, 1],
+          [7, 0, 3],
         ];
         break;
 
       case 1:
         resultIdx = [
-          [7, 4, 5, 2],
-          [1, 2, 1, 1],
-          [6, 3, 3, 2],
+          [7, 4, 5],
+          [1, 2, 1],
+          [6, 3, 3],
         ];
         break;
 
       case 2:
         resultIdx = [
-          [1, 1, 3, 5],
-          [4, 2, 5, 7],
-          [3, 8, 0, 1],
+          [1, 1, 3],
+          [4, 2, 5],
+          [3, 8, 0],
         ];
         break;
 
       case 3:
         resultIdx = [
-          [0, 10, 11, 10],
-          [9, 2, 1, 12],
-          [12, 0, 11, 2],
+          [0, 10, 11],
+          [9, 2, 1],
+          [12, 0, 11],
         ];
         break;
     }
@@ -596,7 +596,7 @@ import {
       greetingTitle.innerHTML = TEXT.greeting.titleHtml;
     }
     if (greetingButton) {
-      greetingButton.textContent = TEXT.greeting.playButton;
+      greetingButtonText.textContent = TEXT.greeting.playButton;
     }
     if (modalTitle) {
       modalTitle.textContent = TEXT.modal.title;

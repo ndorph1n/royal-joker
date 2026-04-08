@@ -86,7 +86,7 @@ img {
   inset: 0;
   height: 100dvh;
   width: 100dvw;
-  background: #740000be;
+  background: #65007ebe;
   backdrop-filter: blur(4px);
   z-index: 150;
 
@@ -97,6 +97,29 @@ img {
   gap: 30px;
 
   text-align: center;
+}
+
+.greeting__img {
+  width: clamp(180px, 50vw, 300px);
+  max-width: min(240px, calc(100vw - 24px));
+  position: relative;
+  top: 70px;
+  animation: shake 0.82s ease-in-out infinite;
+}
+
+@keyframes shake {
+  0% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(5deg);
+  }
+  75% {
+    transform: rotate(-5deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
 }
 
 .greeting__title {
@@ -127,6 +150,7 @@ img {
 }
 
 .greeting__button {
+  position: relative;
   width: 100%;
   max-width: 300px;
   padding: 20px;
@@ -134,6 +158,7 @@ img {
   background-color: #0bb764;
   border-radius: 15px;
   cursor: pointer;
+  z-index: 50;
 
   color: #ffffff;
   text-transform: uppercase;
@@ -161,6 +186,14 @@ img {
   100% {
     scale: 1;
   }
+}
+
+.greeting__pointer {
+  position: absolute;
+  bottom: -20px;
+  right: -20px;
+  z-index: 50;
+  transform: rotate(-35deg);
 }
 
 .hidden {
