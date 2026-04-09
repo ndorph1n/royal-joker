@@ -14,28 +14,25 @@ import gameFieldBgImg from "../assets/rj/field.png";
 import coinsDecorBackImg from "../assets/rj/coin-decor.png";
 import coinsDecorFrontImg from "../assets/rj/coin-decor-f.png";
 import coinDecorImg from "../assets/rj/coin-decor-c.png";
-import lightningAtlas from "../assets/lightning.json";
-import lightningImg from "../assets/lightning.png";
 import glowAtlas from "../assets/glow/glow.json";
 import glowImg from "../assets/glow/glow.png";
-import finalSpecialImg from "../assets/icons/10-1.png";
 import bigWinImg from "../assets/big-win.png";
-import pointImg from "../assets/point.png";
 import royalJokerSign from "../assets/rj/royal-joker.png";
 
 import { GAMEFIELD } from "./utils/parameters";
 import { getCoverScale } from "./utils/screenCover";
 import { createBigWinOverlay } from "./utils/bigWinOverlay";
+import { createCoinConfetti } from "./utils/coinConfetti";
+import { createFinalFieldShake } from "./utils/finalFieldShake";
+import { createFinalGlowEffect } from "./utils/finalGlowEffect";
+import { createFinalSymbolMotion } from "./utils/finalSymbolMotion";
 import { createSpinner } from "./utils/spin";
 import { initGameField } from "./utils/initGameField";
-import {
-  createLightningEffect,
-  getVisibleSymbols,
-} from "./utils/lightningEffect";
 import { createSpecialSymbolOverlay } from "./utils/specialSymbolOverlay";
+import { getVisibleSymbols } from "./utils/visibleSymbols";
 import { findWinCells, wobble } from "./utils/wobble";
 import { SOUNDS } from "./utils/sounds";
-import { TEXT, formatCurrency, formatMultiplier } from "./utils/textContent";
+import { TEXT, formatCurrency } from "./utils/textContent";
 
 (async () => {
   const pixiContainer = document.getElementById("pixi-container");
@@ -66,6 +63,7 @@ import { TEXT, formatCurrency, formatMultiplier } from "./utils/textContent";
   let betUpgradePending = false;
   let gameStarted = false;
   let soundEnabled = false;
+  let finalModalTimeout = null;
   const symbolTextEntries = new Set();
 
   applyStaticTexts();
@@ -100,11 +98,8 @@ import { TEXT, formatCurrency, formatMultiplier } from "./utils/textContent";
 
   const bgTexture = await Assets.load(bgImg);
   const gameFieldBgTexture = await Assets.load(gameFieldBgImg);
-  const lightningTexture = await Assets.load(lightningImg);
   const glowTexture = await Assets.load(glowImg);
-  const finalSpecialTexture = await Assets.load(finalSpecialImg);
   const bigWinTexture = await Assets.load(bigWinImg);
-  const pointTexture = await Assets.load(pointImg);
   const coinsBackDecorTexture = await Assets.load(coinsDecorBackImg);
   const coinsFrontDecorTexture = await Assets.load(coinsDecorFrontImg);
   const coinDecorTexture = await Assets.load(coinDecorImg);
@@ -173,38 +168,6 @@ import { TEXT, formatCurrency, formatMultiplier } from "./utils/textContent";
     zIndex: 3.2,
   });
 
-  const cashOutButton = new Container({
-    label: "cash out button",
-    eventMode: "none",
-  });
-  cashOutButton.zIndex = 4;
-  cashOutButton.on("pointertap", () => {
-    if (cashOutButton.eventMode !== "static") return;
-    SOUNDS.cheers.currentTime = 0;
-    SOUNDS.cheers.play();
-    cashoutModal?.removeAttribute("hidden");
-  });
-
-  const cashOutBg = new Graphics();
-  cashOutBg
-    .roundRect(0, 0, 170, 56, 14)
-    .fill({ color: 0x7b7f86, alpha: 0.9 })
-    .stroke({ color: 0xaeb3ba, width: 2, alpha: 0.5 });
-
-  const cashOutText = new Text({
-    text: TEXT.game.cashOut,
-    style: new TextStyle({
-      fill: 0xe4e7eb,
-      fontFamily: "Arial",
-      fontSize: 24,
-      fontWeight: "700",
-    }),
-    anchor: 0.5,
-  });
-
-  cashOutText.position.set(cashOutBg.width / 2, 28);
-  cashOutButton.alpha = 0.75;
-  cashOutButton.addChild(cashOutBg, cashOutText);
   buildFieldVignettes(fieldVignetteLayer, gameFieldBg);
 
   coinsBackDecor.width = gameFieldBg.width * 0.75;
@@ -216,8 +179,6 @@ import { TEXT, formatCurrency, formatMultiplier } from "./utils/textContent";
   coinDecor.width = 110;
   coinDecor.height = 110;
   coinDecor.position.set(0, -gameFieldBg.height / 2 - 80);
-  cashOutButton.position.set(-75, gameFieldBg.height / 2);
-
   royalJoker.width = gameFieldBg.width * 0.65;
   royalJoker.height = gameFieldBg.height * 0.125;
   royalJoker.position.set(0, -gameFieldBg.height / 2 - 10);
@@ -273,7 +234,6 @@ import { TEXT, formatCurrency, formatMultiplier } from "./utils/textContent";
     gameFieldBg,
     fieldVignetteLayer,
     coinsDecoreContainer,
-    cashOutButton,
     symbolTextLayer,
   );
 
@@ -291,7 +251,7 @@ import { TEXT, formatCurrency, formatMultiplier } from "./utils/textContent";
 
     const controlsHeight = controls?.getBoundingClientRect().height ?? 0;
     const horizontalPadding = width < 680 ? 16 : 32;
-    const topPadding = width < 680 ? 120 : 158;
+    const topPadding = width < 680 ? 120 : 100;
     const bottomPadding = controlsHeight + (width < 680 ? 16 : 28);
     const layoutBounds = getSceneLayoutBounds(gameWindow);
     const availableWidth = Math.max(1, width - horizontalPadding * 2);
@@ -341,28 +301,26 @@ import { TEXT, formatCurrency, formatMultiplier } from "./utils/textContent";
     visibleHeight,
   });
 
-  const lightningEffect = createLightningEffect({
+  const coinConfetti = createCoinConfetti({
     app,
     gameWindow,
-    reels,
-    textures,
-    GAMEFIELD,
-    visibleHeight,
-    atlasData: lightningAtlas,
-    atlasTexture: lightningTexture,
-    glowAtlasData: glowAtlas,
-    glowAtlasTexture: glowTexture,
-    finalTargetTexture: finalSpecialTexture,
+    coinTexture: coinDecorTexture,
   });
+  const finalFieldShake = createFinalFieldShake({
+    app,
+    target: gameWindow,
+  });
+  const finalGlowEffect = createFinalGlowEffect({
+    gameWindow,
+    atlasData: glowAtlas,
+    atlasTexture: glowTexture,
+  });
+  const finalSymbolMotion = createFinalSymbolMotion({ app });
 
   const bigWinOverlay = createBigWinOverlay({
     app,
     scene,
-    cashOutButton,
-    cashOutBg,
-    cashOutText,
     bigWinTexture,
-    pointTexture,
   });
 
   window.addEventListener("click", () => {
@@ -401,7 +359,11 @@ import { TEXT, formatCurrency, formatMultiplier } from "./utils/textContent";
 
     clearSymbolTexts();
     bigWinOverlay.clear();
-    lightningEffect.clear();
+    coinConfetti.clear();
+    finalFieldShake.clear();
+    finalGlowEffect.clear();
+    finalSymbolMotion.clear();
+    hideFinalModal();
     specialSymbolOverlay.setEnabled(false);
     specialSymbolOverlay.setVisibleReels([]);
     const settledReels = [];
@@ -433,9 +395,9 @@ import { TEXT, formatCurrency, formatMultiplier } from "./utils/textContent";
 
       case 3:
         resultIdx = [
-          [0, 10, 11],
-          [9, 2, 1],
-          [12, 0, 11],
+          [2, 9, 4],
+          [2, 9, 4],
+          [2, 9, 4],
         ];
         break;
     }
@@ -555,44 +517,42 @@ import { TEXT, formatCurrency, formatMultiplier } from "./utils/textContent";
     }
 
     if (currentSpinIndex === 3) {
+      const finalVisibleSymbols = getVisibleSymbols({
+        reels,
+        textures,
+        GAMEFIELD,
+        visibleHeight,
+      });
+
+      finalGlowEffect.show(finalVisibleSymbols);
+      finalSymbolMotion.play(finalVisibleSymbols);
+
       SOUNDS.win.currentTime = 0;
       SOUNDS.win.play();
-
-      let multiplierValue = 0;
 
       SOUNDS.megaWin.currentTime = 0;
       SOUNDS.megaWin.play();
 
-      await lightningEffect.playSequence([10, 11, 12], 9, {
-        onTargetReady: (target) => {
-          showSymbolText({
-            id: "final-multiplier",
-            text: "",
-            symbol: target,
-            style: getSymbolTextStyle({
-              fontSize: 32,
-              fill: 0xfff1b5,
-              strokeColor: 0x6f2f00,
-              strokeWidth: 6,
-            }),
-            yOffset: -60,
-            persistent: true,
-          });
-        },
-        onBoltStart: ({ boltIndex, target }) => {
-          multiplierValue += TEXT.game.finalMultiplierSteps[boltIndex] ?? 0;
-          updateSymbolText(
-            "final-multiplier",
-            formatMultiplier(multiplierValue),
-            target,
-          );
-        },
+      finalFieldShake.play({
+        duration: 1400,
+        amplitude: 10,
+        frequency: 40,
       });
 
-      bigWinOverlay.schedule(TEXT.game.bigWinAmount);
+      await coinConfetti.play({
+        duration: 2500,
+        perSide: 50,
+        secondBurstDelay: 1000,
+        secondBurstScale: 0.9,
+      });
+
+      bigWinOverlay.schedule(TEXT.game.bigWinAmount, { delay: 0 });
+      queueFinalModal();
       counters.win.animateTo(TEXT.game.finalSpinWin, {
         duration: 1400,
       });
+      SOUNDS.cheers.currentTime = 0;
+      SOUNDS.cheers.play();
       counters.balance.animateTo(
         counters.balance.target + TEXT.game.finalSpinWin,
         {
@@ -645,10 +605,6 @@ import { TEXT, formatCurrency, formatMultiplier } from "./utils/textContent";
     }, 200);
   });
 
-  modalButton?.addEventListener("click", () => {
-    FbPlayableAd.onCTAClick();
-  });
-
   bet?.addEventListener("click", (event) => {
     if (!betUpgradePending) return;
 
@@ -664,6 +620,10 @@ import { TEXT, formatCurrency, formatMultiplier } from "./utils/textContent";
     if (spinCount < 5 && counters.balance.target >= currentBet) {
       spinButton.disabled = false;
     }
+  });
+
+  modalButton?.addEventListener("click", () => {
+    FbPlayableAd.onCTAClick();
   });
 
   function showSymbolText({
@@ -765,7 +725,7 @@ import { TEXT, formatCurrency, formatMultiplier } from "./utils/textContent";
       greetingButtonText.textContent = TEXT.greeting.playButton;
     }
     if (modalTitle) {
-      modalTitle.textContent = TEXT.modal.title;
+      modalTitle.innerHTML = `${TEXT.modal.title}<br>${TEXT.modal.subtitle}`;
     }
     if (modalButton) {
       modalButton.textContent = TEXT.modal.ctaButton;
@@ -837,7 +797,7 @@ import { TEXT, formatCurrency, formatMultiplier } from "./utils/textContent";
     const messageX = rect.left + rect.width / 2;
     const messageY = rect.top - 78;
     const pointerX = rect.left + rect.width - 26;
-    const pointerY = rect.top - 12;
+    const pointerY = rect.top + 23;
 
     betUpgradeMessage.style.left = `${messageX}px`;
     betUpgradeMessage.style.top = `${messageY}px`;
@@ -845,6 +805,31 @@ import { TEXT, formatCurrency, formatMultiplier } from "./utils/textContent";
 
     betUpgradePointer.style.left = `${pointerX}px`;
     betUpgradePointer.style.top = `${pointerY}px`;
+  }
+
+  function queueFinalModal() {
+    if (!cashoutModal) return;
+
+    if (finalModalTimeout) {
+      clearTimeout(finalModalTimeout);
+    }
+
+    finalModalTimeout = setTimeout(() => {
+      finalModalTimeout = null;
+      bigWinOverlay.clear();
+      document.body.classList.add("final-cta-active");
+      cashoutModal.removeAttribute("hidden");
+    }, 1850);
+  }
+
+  function hideFinalModal() {
+    if (finalModalTimeout) {
+      clearTimeout(finalModalTimeout);
+      finalModalTimeout = null;
+    }
+
+    document.body.classList.remove("final-cta-active");
+    cashoutModal?.setAttribute("hidden", "");
   }
 })();
 

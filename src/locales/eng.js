@@ -4,8 +4,9 @@ export const localeEng = {
     playButton: "TRY NOW",
   },
   modal: {
-    title: "YOU WON 2200€!",
-    ctaButton: "CLAIM BONUS",
+    title: "You won 2200€!",
+    subtitle: "Play now!",
+    ctaButton: "Claim bonus",
   },
   controls: {
     balanceLabel: "Credit:",
@@ -16,10 +17,10 @@ export const localeEng = {
   },
   game: {
     cashOut: "CASHOUT",
-    bigWinAmount: "2200",
+    bigWinAmount: "2200€",
     firstSpinSymbolWin: "10",
     upgradeSpinSymbolWin: "5",
-    upgradeBetPrompt: "Increase bet to 20€",
+    upgradeBetPrompt: "Increasing the bet increases the winnings!",
     finalMultiplierPrefix: "x",
     finalMultiplierSteps: [2, 2, 3, 3, 5, 5],
     startBalance: 500,

@@ -214,8 +214,8 @@ img {
 
 .greeting__pointer {
   position: absolute;
-  bottom: -20px;
-  right: -20px;
+  bottom: -25%;
+  right: 20%;
   z-index: 50;
   transform: rotate(-35deg);
 }
@@ -278,6 +278,12 @@ body.bet-upgrade-active #app {
   filter: brightness(0.42);
 }
 
+body.final-cta-active #app,
+body.final-cta-active .controls,
+body.final-cta-active .logo {
+  filter: brightness(0.42);
+}
+
 body.bet-upgrade-active .controls > *:not(.bet) {
   opacity: 0.25;
 }
@@ -300,7 +306,7 @@ body.bet-upgrade-active .bet {
   border-radius: 16px;
   background: linear-gradient(180deg, #6b0202 0%, #3e0202 100%);
   color: #fff2bf;
-  font-size: clamp(1rem, 2.6vw, 1.25rem);
+  font-size: clamp(0.725rem, 2.6vw, 1.25rem);
   font-weight: 700;
   line-height: 1.2;
   text-align: center;
@@ -312,7 +318,7 @@ body.bet-upgrade-active .bet {
 
 .bet-upgrade__pointer {
   position: absolute;
-  width: clamp(52px, 6vw, 72px);
+  width: clamp(28px, 6vw, 48px);
   transform: rotate(-18deg);
   filter: drop-shadow(0 10px 14px rgba(0, 0, 0, 0.45));
 }
@@ -508,50 +514,61 @@ body.bet-upgrade-active .bet {
   align-items: center;
   justify-content: center;
   padding: 24px;
-  background: rgba(10, 8, 6, 0.72);
-  backdrop-filter: blur(8px);
+  background: rgba(101, 0, 126, 0.74);
+  backdrop-filter: blur(4px);
 }
 
 .modal {
-  width: min(100%, 420px);
-  padding: 32px 28px;
-  border: 1px solid rgba(255, 223, 148, 0.45);
-  border-radius: 24px;
-  background: linear-gradient(125deg, #7e0000, #630000);
-  box-shadow:
-    0 24px 80px rgba(0, 0, 0, 0.45),
-    inset 0 1px 0 rgba(255, 241, 199, 0.15);
+  width: min(100%, 400px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 30px;
   text-align: center;
 }
 
 .modal__title {
+  width: 100%;
+  max-width: 400px;
+  padding: 40px 20px;
+  border: 5px solid gold;
+  border-radius: 15px;
+  background: radial-gradient(
+    circle,
+    hsla(288, 100%, 34%, 1) 0%,
+    hsla(269, 100%, 12%, 1) 100%
+  );
   color: #fff1c3;
-  font-size: 1.75rem;
+  font-size: clamp(2rem, 8vw, 3rem);
   font-weight: 700;
   line-height: 1.2;
   text-transform: uppercase;
+  white-space: normal;
+  box-shadow:
+    0 24px 80px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 241, 199, 0.12);
 }
 
 .modal__button {
-  text-transform: uppercase;
-  margin-top: 24px;
   width: 100%;
+  max-width: 300px;
+  padding: 20px;
   border: none;
-  border-radius: 16px;
-  padding: 16px 20px;
-  background: linear-gradient(180deg, #f0b73b 0%, #d18312 100%);
-  color: #2e1702;
-  font-size: 1.125rem;
-  font-weight: 700;
+  border-radius: 15px;
+  background-color: #0bb764;
+  color: #ffffff;
+  font-size: 1.725rem;
+  font-weight: 600;
   cursor: pointer;
+  text-transform: uppercase;
   transition:
     transform 0.16s ease,
     filter 0.16s ease;
+  animation: zoom-in-out 2.2s linear infinite;
 }
 
 .modal__button:hover {
-  filter: brightness(1.04);
-  transform: translateY(-1px);
+  filter: brightness(0.96);
 }
 
 @media (max-width: 760px) {

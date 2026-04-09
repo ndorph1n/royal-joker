@@ -7,15 +7,7 @@ import {
   TextStyle,
 } from "pixi.js";
 
-export function createBigWinOverlay({
-  app,
-  scene,
-  cashOutButton,
-  cashOutBg,
-  cashOutText,
-  bigWinTexture,
-  pointTexture,
-}) {
+export function createBigWinOverlay({ app, scene, bigWinTexture }) {
   const overlay = new Container({ label: "big win overlay" });
   overlay.zIndex = 20;
   overlay.sortableChildren = true;
@@ -46,37 +38,19 @@ export function createBigWinOverlay({
   });
   amountText.zIndex = 2;
 
-  const hand = new Sprite({
-    texture: pointTexture,
-    anchor: { x: 0.5, y: 0.5 },
-    visible: false,
-  });
-  hand.scale.x = -1;
-  hand.zIndex = 3;
-
-  overlay.addChild(backdrop, bigWin, amountText, hand);
+  overlay.addChild(backdrop, bigWin, amountText);
 
   let showTimeout = null;
-  let activateTimeout = null;
   let introTick = null;
-  let handTick = null;
 
-  setCashOutActive(false);
-
-  function schedule(amount = "200 €") {
+  function schedule(amount = "200 EUR", options = {}) {
     clear();
+    const delay = options.delay ?? 0;
 
     showTimeout = setTimeout(() => {
       showTimeout = null;
       showBigWin(amount);
-
-      activateTimeout = setTimeout(() => {
-        activateTimeout = null;
-        hideBigWin();
-        setCashOutActive(true);
-        showHand();
-      }, 2000);
-    }, 1000);
+    }, delay);
   }
 
   function clear() {
@@ -84,28 +58,17 @@ export function createBigWinOverlay({
       clearTimeout(showTimeout);
       showTimeout = null;
     }
-    if (activateTimeout) {
-      clearTimeout(activateTimeout);
-      activateTimeout = null;
-    }
     if (introTick) {
       app.ticker.remove(introTick);
       introTick = null;
     }
-    if (handTick) {
-      app.ticker.remove(handTick);
-      handTick = null;
-    }
 
-    hideBigWin();
-    hand.visible = false;
     backdrop.visible = false;
+    bigWin.visible = false;
+    amountText.visible = false;
     bigWin.scale.set(1);
     amountText.text = "";
-    setCashOutActive(false);
   }
-
-  return { schedule, clear };
 
   function showBigWin(amount) {
     const firstStageDuration = 220;
@@ -150,56 +113,6 @@ export function createBigWinOverlay({
     app.ticker.add(introTick);
   }
 
-  function showHand() {
-    const baseX = cashOutButton.x + cashOutButton.width - 8;
-    const baseY = cashOutButton.y + cashOutButton.height - 10;
-    let elapsed = 0;
-
-    hand.visible = true;
-    hand.width = 86;
-    hand.height = 86;
-    hand.position.set(baseX, baseY);
-
-    handTick = () => {
-      elapsed += app.ticker.deltaMS / 1000;
-      const wave = Math.sin(elapsed * 3.8) * 0.5 + 0.5;
-
-      hand.position.set(baseX + wave * 14, baseY - wave * 8);
-    };
-
-    app.ticker.add(handTick);
-  }
-
-  function setCashOutActive(active) {
-    cashOutButton.eventMode = active ? "static" : "none";
-    cashOutButton.cursor = active ? "pointer" : "default";
-    cashOutButton.alpha = active ? 1 : 0.75;
-    redrawCashOut(active);
-    cashOutText.style.fill = active ? 0xffffff : 0xe4e7eb;
-  }
-
-  function redrawCashOut(active) {
-    cashOutBg.clear();
-    if (active) {
-      cashOutBg
-        .roundRect(0, 0, 170, 56, 14)
-        .fill({ color: 0xe09b18, alpha: 1 })
-        .stroke({ color: 0xffe3a1, width: 3, alpha: 0.95 });
-      return;
-    }
-
-    cashOutBg
-      .roundRect(0, 0, 170, 56, 14)
-      .fill({ color: 0x7b7f86, alpha: 0.9 })
-      .stroke({ color: 0xaeb3ba, width: 2, alpha: 0.5 });
-  }
-
-  function hideBigWin() {
-    backdrop.visible = false;
-    bigWin.visible = false;
-    amountText.visible = false;
-  }
-
   function updateBackdrop() {
     const scaleX = scene.scale.x || 1;
     const scaleY = scene.scale.y || 1;
@@ -209,8 +122,10 @@ export function createBigWinOverlay({
     backdrop.clear();
     backdrop
       .rect(-width / 2, -height / 2, width, height)
-      .fill({ color: 0x740000, alpha: 0.745 });
+      .fill({ color: 0x65007e, alpha: 0.25 });
   }
+
+  return { schedule, clear };
 }
 
 function lerp(a, b, t) {
