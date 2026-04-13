@@ -129,13 +129,21 @@ function getVisibleSprites(reel, GAMEFIELD, visibleHeight, rows = 3) {
 }
 
 export function findWinCells(shown, cols, rows) {
-  const wins = new Set();
-  if (cols < 3 || rows < 3) return wins;
+  return new Set(
+    findWinLines(shown, cols, rows).flatMap((cells) =>
+      cells.map(([c, r]) => `${c},${r}`),
+    ),
+  );
+}
+
+export function findWinLines(shown, cols, rows) {
+  const lines = [];
+  if (cols < 3 || rows < 3) return lines;
 
   const addLine = (cells) => {
     const v = cells.map(([c, r]) => shown[c][r]);
     if (v[0] === v[1] && v[1] === v[2]) {
-      cells.forEach(([c, r]) => wins.add(`${c},${r}`));
+      lines.push(cells);
     }
   };
 
@@ -166,7 +174,7 @@ export function findWinCells(shown, cols, rows) {
     [2, 0],
   ]);
 
-  return wins;
+  return lines;
 }
 
 function lerp(a, b, t) {

@@ -539,7 +539,7 @@ body.bet-upgrade-active .bet {
     hsla(269, 100%, 12%, 1) 100%
   );
   color: #fff1c3;
-  font-size: clamp(2rem, 8vw, 3rem);
+  font-size: clamp(1.25rem, 8vw, 3rem);
   font-weight: 700;
   line-height: 1.2;
   text-transform: uppercase;

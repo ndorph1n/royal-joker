@@ -20,16 +20,14 @@ export function getVisibleSymbols({ reels, textures, GAMEFIELD, visibleHeight })
           point: {
             x:
               -GAMEFIELD.width / 2 +
-              GAMEFIELD.startX +
               reel.x +
               sprite.x +
-              sprite.width / 2,
+              (0.5 - sprite.anchor.x) * sprite.width,
             y:
               -GAMEFIELD.height / 2 +
-              GAMEFIELD.startY +
               reel.y +
               sprite.y +
-              sprite.height / 2,
+              (0.5 - sprite.anchor.y) * sprite.height,
           },
         });
       });

@@ -1,19 +1,17 @@
-// import { localeBg } from "../locales/bg";
-// import { localeBr } from "../locales/br";
-// import { localeCl } from "../locales/cl";
-// import { localeEg } from "../locales/eg";
-// import { localeGr } from "../locales/gr";
-// import { localeNl } from "../locales/nl";
+import { localeBe } from "../locales/be";
+import { localeDe } from "../locales/de";
 import { localeEng } from "../locales/eng";
+import { localeKz } from "../locales/kz";
+import { localeNl } from "../locales/nl";
+import { localePt } from "../locales/pt";
 
 export const COUNTRIES = {
-  // CL: localeCl,
-  // BG: localeBg,
-  // BR: localeBr,
-  // EG: localeEg,
-  // GR: localeGr,
-  // NL: localeNl,
+  BE: localeBe,
+  DE: localeDe,
   ENG: localeEng,
+  KZ: localeKz,
+  NL: localeNl,
+  PT: localePt,
 };
 
 const requestedCountry = import.meta.env.VITE_COUNTRY?.toUpperCase?.() ?? "ENG";

@@ -4,8 +4,8 @@ export const localeEng = {
     playButton: "TRY NOW",
   },
   modal: {
-    title: "You won 2200€!",
-    subtitle: "Play now!",
+    title: "Hurry to collect your bonus!",
+    subtitle: "",
     ctaButton: "Claim bonus",
   },
   controls: {
@@ -21,6 +21,7 @@ export const localeEng = {
     firstSpinSymbolWin: "10",
     upgradeSpinSymbolWin: "5",
     upgradeBetPrompt: "Increasing the bet increases the winnings!",
+    balanceIntroLabel: "BALANCE",
     finalMultiplierPrefix: "x",
     finalMultiplierSteps: [2, 2, 3, 3, 5, 5],
     startBalance: 500,

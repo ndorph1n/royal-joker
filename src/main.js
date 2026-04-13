@@ -14,6 +14,8 @@ import gameFieldBgImg from "../assets/rj/field.png";
 import coinsDecorBackImg from "../assets/rj/coin-decor.png";
 import coinsDecorFrontImg from "../assets/rj/coin-decor-f.png";
 import coinDecorImg from "../assets/rj/coin-decor-c.png";
+import fireAtlas from "../assets/fire/spritesheet.json";
+import fireImg from "../assets/fire/spritesheet.png";
 import glowAtlas from "../assets/glow/glow.json";
 import glowImg from "../assets/glow/glow.png";
 import bigWinImg from "../assets/big-win.png";
@@ -30,7 +32,9 @@ import { createSpinner } from "./utils/spin";
 import { initGameField } from "./utils/initGameField";
 import { createSpecialSymbolOverlay } from "./utils/specialSymbolOverlay";
 import { getVisibleSymbols } from "./utils/visibleSymbols";
-import { findWinCells, wobble } from "./utils/wobble";
+import { createWinningFireEffect } from "./utils/winningFireEffect";
+import { createWinningLineOverlay } from "./utils/winningLineOverlay";
+import { findWinCells, findWinLines, wobble } from "./utils/wobble";
 import { SOUNDS } from "./utils/sounds";
 import { TEXT, formatCurrency } from "./utils/textContent";
 
@@ -91,6 +95,7 @@ import { TEXT, formatCurrency } from "./utils/textContent";
     background: "#000000",
     resizeTo: pixiContainer,
     autoDensity: true,
+    antialias: true,
     resolution: Math.min(window.devicePixelRatio || 1, 2),
   });
 
@@ -98,6 +103,7 @@ import { TEXT, formatCurrency } from "./utils/textContent";
 
   const bgTexture = await Assets.load(bgImg);
   const gameFieldBgTexture = await Assets.load(gameFieldBgImg);
+  const fireTexture = await Assets.load(fireImg);
   const glowTexture = await Assets.load(glowImg);
   const bigWinTexture = await Assets.load(bigWinImg);
   const coinsBackDecorTexture = await Assets.load(coinsDecorBackImg);
@@ -310,12 +316,18 @@ import { TEXT, formatCurrency } from "./utils/textContent";
     app,
     target: gameWindow,
   });
+  const winningFireEffect = createWinningFireEffect({
+    gameWindow,
+    atlasData: fireAtlas,
+    atlasTexture: fireTexture,
+  });
   const finalGlowEffect = createFinalGlowEffect({
     gameWindow,
     atlasData: glowAtlas,
     atlasTexture: glowTexture,
   });
   const finalSymbolMotion = createFinalSymbolMotion({ app });
+  const winningLineOverlay = createWinningLineOverlay({ gameWindow });
 
   const bigWinOverlay = createBigWinOverlay({
     app,
@@ -363,6 +375,8 @@ import { TEXT, formatCurrency } from "./utils/textContent";
     finalFieldShake.clear();
     finalGlowEffect.clear();
     finalSymbolMotion.clear();
+    winningFireEffect.clear();
+    winningLineOverlay.clear();
     hideFinalModal();
     specialSymbolOverlay.setEnabled(false);
     specialSymbolOverlay.setVisibleReels([]);
@@ -424,21 +438,40 @@ import { TEXT, formatCurrency } from "./utils/textContent";
 
     let stopWobble = null;
 
+    const visibleSymbols = getVisibleSymbols({
+      reels,
+      textures,
+      GAMEFIELD,
+      visibleHeight,
+    });
+    const currentWinCells = findWinCells(
+      resultIdx,
+      GAMEFIELD.cols,
+      GAMEFIELD.rows,
+    );
+    const currentWinLines = findWinLines(
+      resultIdx,
+      GAMEFIELD.cols,
+      GAMEFIELD.rows,
+    );
+    const currentWinningSymbols = getVisibleSymbolsByWinCells({
+      symbols: visibleSymbols,
+      winCells: currentWinCells,
+    });
+
+    winningFireEffect.show(currentWinningSymbols);
+    winningLineOverlay.show(
+      getVisibleSymbolLines({
+        symbols: visibleSymbols,
+        winLines: currentWinLines,
+      }),
+    );
+
     if (currentSpinIndex === 0) {
       SOUNDS.win.currentTime = 0;
       SOUNDS.win.play();
 
-      const winningCenterSymbol = getWinningCenterSymbol(
-        getVisibleSymbolsByWinCells({
-          symbols: getVisibleSymbols({
-            reels,
-            textures,
-            GAMEFIELD,
-            visibleHeight,
-          }),
-          winCells: findWinCells(resultIdx, GAMEFIELD.cols, GAMEFIELD.rows),
-        }),
-      );
+      const winningCenterSymbol = getWinningCenterSymbol(currentWinningSymbols);
 
       if (winningCenterSymbol) {
         showSymbolText({
@@ -477,17 +510,7 @@ import { TEXT, formatCurrency } from "./utils/textContent";
       SOUNDS.win.currentTime = 0;
       SOUNDS.win.play();
 
-      const winningCenterSymbol = getWinningCenterSymbol(
-        getVisibleSymbolsByWinCells({
-          symbols: getVisibleSymbols({
-            reels,
-            textures,
-            GAMEFIELD,
-            visibleHeight,
-          }),
-          winCells: findWinCells(resultIdx, GAMEFIELD.cols, GAMEFIELD.rows),
-        }),
-      );
+      const winningCenterSymbol = getWinningCenterSymbol(currentWinningSymbols);
 
       if (winningCenterSymbol) {
         showSymbolText({
@@ -570,6 +593,8 @@ import { TEXT, formatCurrency } from "./utils/textContent";
       () => {
         stopWobble?.();
         stopWobble = null;
+        winningFireEffect.clear();
+        winningLineOverlay.clear();
 
         if (currentSpinIndex === 2) {
           showBetUpgradePrompt();
@@ -758,7 +783,7 @@ import { TEXT, formatCurrency } from "./utils/textContent";
   function showBalanceIntro() {
     if (!balanceIntro) return;
 
-    balanceIntro.textContent = `BALANCE +${formatCurrency(TEXT.game.startBalance)}`;
+    balanceIntro.textContent = `${TEXT.game.balanceIntroLabel} +${formatCurrency(TEXT.game.startBalance)}`;
     balanceIntro.classList.remove("balance-intro--show");
     void balanceIntro.offsetWidth;
     balanceIntro.classList.add("balance-intro--show");
@@ -1008,4 +1033,31 @@ function getVisibleSymbolsByWinCells({ symbols, winCells }) {
 
     return winCells.has(`${col},${row}`);
   });
+}
+
+function getVisibleSymbolLines({ symbols, winLines }) {
+  if (!symbols.length || !winLines.length) return [];
+
+  const sortedX = [...new Set(symbols.map((symbol) => symbol.point.x))].sort(
+    (a, b) => a - b,
+  );
+  const sortedY = [...new Set(symbols.map((symbol) => symbol.point.y))].sort(
+    (a, b) => b - a,
+  );
+
+  return winLines
+    .map((cells) =>
+      cells
+        .map(([col, row]) =>
+          symbols.find((symbol) => {
+            const symbolCol = sortedX.indexOf(symbol.point.x);
+            const symbolRow = sortedY.indexOf(symbol.point.y);
+
+            return symbolCol === col && symbolRow === row;
+          }),
+        )
+        .filter(Boolean)
+        .map((symbol) => symbol.point),
+    )
+    .filter((line) => line.length >= 2);
 }

@@ -5,15 +5,15 @@
   "type": "module",
   "scripts": {
     "start": "npm run dev",
+    "dev": "vite",
     "build": "vite build",
-    "build:cl": "vite build --mode cl",
-    "build:bg": "vite build --mode bg",
-    "build:br": "vite build --mode br",
-    "build:eg": "vite build --mode eg",
-    "build:gr": "vite build --mode gr",
+    "build:eng": "vite build --mode eng",
+    "build:pt": "vite build --mode pt",
+    "build:be": "vite build --mode be",
+    "build:de": "vite build --mode de",
+    "build:kz": "vite build --mode kz",
     "build:nl": "vite build --mode nl",
-    "lint": "eslint .",
-    "dev": "vite"
+    "lint": "eslint ."
   },
   "dependencies": {
     "pixi.js": "^8.8.1",
